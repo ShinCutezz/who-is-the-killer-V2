@@ -1,0 +1,461 @@
+local Players, UIS = game:GetService("Players"), game:GetService("UserInputService")
+local LP = Players.LocalPlayer
+
+_G.UI = { scan = false, coin = false, gun = false, hb = false, showHb = true, noclip = false, mini = false, spd = 16, hbSize = 12, jmp = 50, defJmp = 50 }
+local function make(cls, props, p)
+	local o = Instance.new(cls, p)
+	for k, v in pairs(props) do o[k] = v end
+	return o
+end
+_G.UI.make = make
+
+if LP:WaitForChild("PlayerGui"):FindFirstChild("DualMenu") then LP.PlayerGui.DualMenu:Destroy() end
+local gui = make("ScreenGui", {Name = "DualMenu", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling}, LP.PlayerGui)
+
+local frame = make("Frame", {Size = UDim2.new(0, 290, 0, 302), Position = UDim2.new(0.05, 0, 0.25, 0), BackgroundColor3 = Color3.fromRGB(22, 16, 34), Active = false, Selectable = false}, gui)
+make("UICorner", {CornerRadius = UDim.new(0, 8)}, frame)
+local stroke = make("UIStroke", {Thickness = 2, Color = Color3.fromRGB(170, 60, 255)}, frame)
+
+local topBar = make("TextButton", {Size = UDim2.new(1, -34, 0, 24), Position = UDim2.new(0, 32, 0, 1), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Selectable = false, Modal = false}, frame)
+
+local dragInput, dragStart, startPos = nil, nil, nil
+topBar.InputBegan:Connect(function(inp)
+	if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+		dragInput = inp
+		dragStart = inp.Position
+		startPos = frame.Position
+	end
+end)
+UIS.InputChanged:Connect(function(inp)
+	if inp == dragInput then
+		local delta = inp.Position - dragStart
+		frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+UIS.InputEnded:Connect(function(inp)
+	if inp == dragInput then
+		dragInput = nil
+	end
+end)
+
+local minBtn = make("TextButton", {Size = UDim2.new(0, 24, 0, 20), Position = UDim2.new(0, 5, 0, 3), Text = "-", Font = Enum.Font.GothamBold, TextSize = 14, BackgroundColor3 = Color3.fromRGB(48, 32, 74), TextColor3 = Color3.new(1, 1, 1), Selectable = false, Modal = false}, frame)
+make("UICorner", {CornerRadius = UDim.new(0, 5)}, minBtn)
+
+local body = make("Frame", {Size = UDim2.new(1, -12, 1, -30), Position = UDim2.new(0, 6, 0, 26), BackgroundTransparency = 1, Active = false}, frame)
+local left = make("Frame", {Size = UDim2.new(0.47, -3, 1, 0), BackgroundColor3 = Color3.fromRGB(32, 22, 50), Active = false}, body)
+local right = make("Frame", {Size = UDim2.new(0.53, -3, 1, 0), Position = UDim2.new(0.47, 3, 0, 0), BackgroundColor3 = Color3.fromRGB(32, 22, 50), Active = false}, body)
+make("UICorner", {CornerRadius = UDim.new(0, 6)}, left)
+make("UICorner", {CornerRadius = UDim.new(0, 6)}, right)
+
+local function addBtn(txt, y, w, x)
+	local b = make("TextButton", {Size = UDim2.new(w or 1, w and -6 or -10, 0, 25), Position = UDim2.new(x or 0, x and 2 or 5, 0, y), Text = txt, Font = Enum.Font.GothamBold, TextSize = 10, BackgroundColor3 = Color3.fromRGB(48, 32, 74), TextColor3 = Color3.new(1, 1, 1), Selectable = false, Modal = false}, left)
+	make("UICorner", {CornerRadius = UDim.new(0, 6)}, b)
+	return b
+end
+
+_G.UI.left = left
+_G.UI.stroke = stroke
+_G.UI.scanBtn   = addBtn("Quét", 6)
+_G.UI.coinBtn   = addBtn("Hút Xu", 35)
+_G.UI.gunBtn    = addBtn("Hút Súng", 64)
+_G.UI.noclipBtn = addBtn("Noclip", 93)
+_G.UI.hbBtn     = addBtn("Hitbox", 122, 0.56, 0)
+_G.UI.showHbBtn = addBtn("Khung: BẬT", 122, 0.44, 0.56)
+_G.UI.showHbBtn.BackgroundColor3 = Color3.fromRGB(115, 45, 195)
+
+local list = make("ScrollingFrame", {Size = UDim2.new(1, -8, 1, -8), Position = UDim2.new(0, 4, 0, 4), BackgroundTransparency = 1, ScrollBarThickness = 3, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), Active = false, Selectable = false}, right)
+make("UIListLayout", {Padding = UDim.new(0, 3)}, list)
+_G.UI.list = list
+
+minBtn.MouseButton1Click:Connect(function()
+	_G.UI.mini = not _G.UI.mini
+	minBtn.Text = _G.UI.mini and "+" or "-"
+	body.Visible = not _G.UI.mini
+	topBar.Visible = not _G.UI.mini
+	frame.Size = _G.UI.mini and UDim2.new(0, 34, 0, 26) or UDim2.new(0, 290, 0, 302)
+end)
+local Players, UIS, RunService = game:GetService("Players"), game:GetService("UserInputService"), game:GetService("RunService")
+local LP, UI = Players.LocalPlayer, _G.UI
+
+local hum0 = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+local defJmp = 50
+if hum0 then
+	if hum0.UseJumpPower then
+		defJmp = math.floor(hum0.JumpPower)
+	else
+		defJmp = math.floor(math.sqrt(2 * workspace.Gravity * hum0.JumpHeight))
+	end
+end
+UI.defJmp = defJmp
+UI.jmp = defJmp
+
+local function addSlider(txt, y, minV, maxV, defV, key)
+	local lbl = UI.make("TextLabel", {Size = UDim2.new(1, -10, 0, 15), Position = UDim2.new(0, 5, 0, y), BackgroundTransparency = 1, Text = txt .. ": " .. defV, TextColor3 = Color3.fromRGB(230, 200, 255), Font = Enum.Font.GothamBold, TextSize = 10, Active = false}, UI.left)
+	local bg = UI.make("TextButton", {Size = UDim2.new(1, -14, 0, 10), Position = UDim2.new(0, 7, 0, y + 17), BackgroundColor3 = Color3.fromRGB(52, 36, 80), Text = "", AutoButtonColor = false, Selectable = false, Modal = false}, UI.left)
+	local fill = UI.make("Frame", {Size = UDim2.new((defV - minV) / (maxV - minV), 0, 1, 0), BackgroundColor3 = Color3.fromRGB(185, 75, 255), Active = false}, bg)
+	UI.make("UICorner", {CornerRadius = UDim.new(1, 0)}, bg)
+	UI.make("UICorner", {CornerRadius = UDim.new(1, 0)}, fill)
+
+	local activeTouch = nil
+	local function upd(x)
+		local pct = math.clamp((x - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1)
+		local val = math.floor(minV + pct * (maxV - minV))
+		UI[key] = val
+		lbl.Text = txt .. ": " .. val
+		fill.Size = UDim2.new(pct, 0, 1, 0)
+	end
+	bg.InputBegan:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+			activeTouch = i
+			upd(i.Position.X)
+		end
+	end)
+	UIS.InputChanged:Connect(function(i)
+		if i == activeTouch then
+			upd(i.Position.X)
+		end
+	end)
+	UIS.InputEnded:Connect(function(i)
+		if i == activeTouch then
+			activeTouch = nil
+		end
+	end)
+	return fill
+end
+
+local sFill1 = addSlider("Speed", 151, 16, 100, 16, "spd")
+local sFill2 = addSlider("Size HB", 185, 2, 35, 12, "hbSize")
+local sFill3 = addSlider("Jump", 219, defJmp, 200, defJmp, "jmp")
+
+RunService.RenderStepped:Connect(function()
+	if not UI.left or not UI.left.Parent then return end
+	local rgb = Color3.fromHSV(0.72 + math.sin(tick() * 2.5) * 0.08, 0.85, 1)
+	UI.stroke.Color = rgb
+	sFill1.BackgroundColor3 = rgb
+	sFill2.BackgroundColor3 = rgb
+	sFill3.BackgroundColor3 = rgb
+end)
+local Players, RS = game:GetService("Players"), game:GetService("ReplicatedStorage")
+local LP, UI = Players.LocalPlayer, _G.UI
+
+local COLS = { Murder = Color3.fromRGB(255, 55, 55), Sheriff = Color3.fromRGB(0, 175, 255), Innocent = Color3.fromRGB(50, 255, 90) }
+UI.COLS = COLS
+UI.roleCache = {}
+
+local function bindReset(p)
+	p.CharacterAdded:Connect(function() UI.roleCache[p.UserId] = nil end)
+end
+for _, p in ipairs(Players:GetPlayers()) do bindReset(p) end
+Players.PlayerAdded:Connect(bindReset)
+Players.PlayerRemoving:Connect(function(p) UI.roleCache[p.UserId] = nil end)
+
+local IGNORE_ITEMS = {"detective", "medic", "doctor", "jester", "clown", "engineer", "spy", "toy", "fake", "radio", "spray", "emote", "phone", "gg", "pet", "effect", "perk", "power"}
+
+local function isIgnored(str)
+	if not str or str == "" then return false end
+	local s = tostring(str):lower()
+	for _, k in ipairs(IGNORE_ITEMS) do
+		if s:find(k, 1, true) then return true end
+	end
+	return false
+end
+
+local function checkToolType(tool)
+	local n = tool.Name:lower()
+	if isIgnored(n) then return nil end
+
+	if n:find("knife") or n:find("dagger") or n:find("scythe") or n:find("machete") or n:find("blade") or n:find("dao") then
+		return "Murder"
+	end
+	if n:find("gun") or n:find("revolver") or n:find("luger") or n:find("bringer") or n:find("shark") or n:find("laser") or n:find("blaster") or n:find("sung") then
+		return "Sheriff"
+	end
+
+	local hasRemote = false
+	for _, d in ipairs(tool:GetDescendants()) do
+		local dn = d.Name:lower()
+		if dn:find("knife") or dn:find("slash") or dn:find("stab") or dn:find("throw") then
+			return "Murder"
+		end
+		if dn:find("gun") or dn:find("shoot") or dn:find("bullet") or dn:find("ammo") or dn:find("revolver") or dn:find("beam") then
+			return "Sheriff"
+		end
+		if d:IsA("RemoteEvent") or d:IsA("RemoteFunction") then
+			hasRemote = true
+		end
+	end
+
+	if hasRemote and tool:FindFirstChild("Handle") then
+		for _, s in ipairs(tool:GetDescendants()) do
+			if s:IsA("Sound") and (s.Name:lower():find("fire") or s.Name:lower():find("shoot") or s.Name:lower():find("reload")) then
+				return "Sheriff"
+			end
+		end
+		return "Murder"
+	end
+
+	return nil
+end
+
+function UI.getServerData()
+	local ok, data = pcall(function()
+		for _, obj in ipairs(RS:GetDescendants()) do
+			if obj:IsA("RemoteFunction") and (obj.Name == "GetPlayerData" or obj.Name:lower():find("playerdata")) then
+				return obj:InvokeServer()
+			end
+		end
+		return nil
+	end)
+	return (ok and type(data) == "table" and next(data) ~= nil) and data or nil
+end
+
+function UI.getRole(p, data)
+	local hum = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
+	if not p.Character or (hum and hum.Health <= 0) then
+		UI.roleCache[p.UserId] = nil
+		return "Innocent"
+	end
+
+	if data then
+		local pData = data[p.Name]
+		if not pData then UI.roleCache[p.UserId] = nil; return "Innocent" end
+		local r = tostring(pData.Role or pData.role or ""):lower()
+		if isIgnored(r) then UI.roleCache[p.UserId] = nil; return "Innocent" end
+		if r:find("murder") or r == "killer" then UI.roleCache[p.UserId] = "Murder"; return "Murder" end
+		if r:find("sheriff") or r:find("hero") or r:find("police") then UI.roleCache[p.UserId] = "Sheriff"; return "Sheriff" end
+		UI.roleCache[p.UserId] = nil
+		return "Innocent"
+	end
+
+	for k, v in pairs(p:GetAttributes()) do
+		local val = tostring(v):lower()
+		if not isIgnored(val) then
+			if val == "murderer" or val == "murder" or val == "killer" then UI.roleCache[p.UserId] = "Murder"; return "Murder" end
+			if val == "sheriff" or val == "police" or val == "hero" then UI.roleCache[p.UserId] = "Sheriff"; return "Sheriff" end
+		end
+	end
+	if p.Team then
+		local t = p.Team.Name:lower()
+		if not isIgnored(t) then
+			if t:find("murder") or t == "killer" then UI.roleCache[p.UserId] = "Murder"; return "Murder" end
+			if t:find("sheriff") or t:find("police") or t == "hero" then UI.roleCache[p.UserId] = "Sheriff"; return "Sheriff" end
+		end
+	end
+
+	local hasWeapon = false
+	for _, box in ipairs({p:FindFirstChild("Backpack"), p.Character}) do
+		if box then
+			for _, t in ipairs(box:GetChildren()) do
+				if t:IsA("Tool") then
+					local detected = checkToolType(t)
+					if detected then
+						hasWeapon = true
+						UI.roleCache[p.UserId] = detected
+						return detected
+					end
+				end
+			end
+		end
+	end
+
+	if not hasWeapon then
+		local bp = p:FindFirstChild("Backpack")
+		if bp and #bp:GetChildren() == 0 then UI.roleCache[p.UserId] = nil end
+	end
+
+	return UI.roleCache[p.UserId] or "Innocent"
+end
+
+function UI.updateScan()
+	for _, c in ipairs(UI.list:GetChildren()) do if c:IsA("TextLabel") then c:Destroy() end end
+	local data = UI.getServerData()
+
+	if not data then
+		local anyWep = false
+		for _, p in ipairs(Players:GetPlayers()) do
+			for _, box in ipairs({p:FindFirstChild("Backpack"), p.Character}) do
+				if box then
+					for _, t in ipairs(box:GetChildren()) do
+						if t:IsA("Tool") and checkToolType(t) then anyWep = true; break end
+					end
+				end
+			end
+		end
+		if not anyWep then table.clear(UI.roleCache) end
+	end
+
+	for _, p in ipairs(Players:GetPlayers()) do
+		local col = COLS[UI.getRole(p, data)]
+		if p ~= LP and p.Character then
+			local hl = p.Character:FindFirstChild("RoleHL")
+			if UI.scan then
+				hl = hl or UI.make("Highlight", {Name = "RoleHL", FillTransparency = 0.25, OutlineTransparency = 0, DepthMode = Enum.HighlightDepthMode.AlwaysOnTop}, p.Character)
+				hl.Adornee, hl.Enabled, hl.FillColor, hl.OutlineColor = p.Character, true, col, col
+			elseif hl then hl:Destroy() end
+		end
+		if UI.scan then
+			local lbl = UI.make("TextLabel", {Size = UDim2.new(1, -4, 0, 20), BackgroundColor3 = Color3.fromRGB(45, 30, 68), Text = " " .. (p.DisplayName ~= "" and p.DisplayName or p.Name), TextColor3 = col, Font = Enum.Font.GothamBold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Active = false}, UI.list)
+			UI.make("UICorner", {CornerRadius = UDim.new(0, 4)}, lbl)
+		end
+	end
+end
+local Players = game:GetService("Players")
+local LP, UI = Players.LocalPlayer, _G.UI
+
+function UI.updateHitbox()
+	local data = UI.getServerData()
+	local myRole = UI.getRole(LP, data)
+
+	local sheriffAlive = false
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= LP and p.Character then
+			local hum = p.Character:FindFirstChildOfClass("Humanoid")
+			if hum and hum.Health > 0 and UI.getRole(p, data) == "Sheriff" then
+				sheriffAlive = true
+				break
+			end
+		end
+	end
+
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= LP and p.Character then
+			local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+			local hum = p.Character:FindFirstChildOfClass("Humanoid")
+			local torso = p.Character:FindFirstChild("UpperTorso") or p.Character:FindFirstChild("Torso")
+			if hrp then
+				local isAlive = hum and hum.Health > 0
+				local targetRole = UI.getRole(p, data)
+				local shouldExpand = false
+
+				if UI.hb and isAlive then
+					if myRole == "Sheriff" then
+						shouldExpand = (targetRole == "Murder")
+					elseif myRole == "Murder" then
+						if sheriffAlive then
+							shouldExpand = (targetRole == "Sheriff")
+						else
+							shouldExpand = (targetRole == "Innocent")
+						end
+					else
+						shouldExpand = (targetRole == "Murder")
+					end
+				end
+
+				if shouldExpand then
+					local s = UI.hbSize
+					local boxSize = Vector3.new(s, s, s)
+
+					hrp.Size = boxSize
+					hrp.Transparency = UI.showHb and 0.78 or 1
+					hrp.Color = UI.COLS[targetRole] or Color3.fromRGB(185, 75, 255)
+					hrp.Material = Enum.Material.Neon
+					hrp.CastShadow = false
+					hrp.CanCollide = false
+					hrp.CanQuery = true
+					hrp.CanTouch = true
+
+					if torso then
+						if not torso:GetAttribute("OrigSize") then
+							torso:SetAttribute("OrigSize", torso.Size)
+						end
+						torso.Size = boxSize
+						torso.Massless = true
+						torso.CanCollide = false
+						torso.CanQuery = true
+						torso.CanTouch = true
+					end
+				else
+					hrp.Size = Vector3.new(2, 2, 1)
+					hrp.Transparency = 1
+					hrp.CanCollide = false
+					if torso and torso:GetAttribute("OrigSize") then
+						torso.Size = torso:GetAttribute("OrigSize")
+						torso.Massless = false
+					end
+				end
+			end
+		end
+	end
+end
+local Players, RunService = game:GetService("Players"), game:GetService("RunService")
+local LP, UI = Players.LocalPlayer, _G.UI
+
+local COINS = {"coin", "token", "candy", "pumpkin", "snow", "egg", "star", "gem", "event", "xu", "money", "cash", "ball", "treat"}
+local GUNS  = {"gundrop", "droppedgun", "sheriffgun", "revolver", "gun"}
+local OFF_COL = Color3.fromRGB(48, 32, 74)
+local lastSafeCFrame = nil
+
+RunService.Stepped:Connect(function()
+	local char = LP.Character
+	local root = char and char:FindFirstChild("HumanoidRootPart")
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+
+	if UI.noclip and char and root and hum then
+		if hum.FloorMaterial ~= Enum.Material.Air and root.Position.Y > -30 then lastSafeCFrame = root.CFrame end
+		if root.Position.Y < -50 and lastSafeCFrame then root.AssemblyLinearVelocity = Vector3.zero; root.CFrame = lastSafeCFrame + Vector3.new(0, 3, 0) end
+		local footY = root.Position.Y - (hum.HipHeight + root.Size.Y * 0.5) + 0.4
+		for _, part in ipairs(char:GetDescendants()) do if part:IsA("BasePart") then part.CanCollide = false end end
+		for _, obj in ipairs(workspace:GetPartBoundsInRadius(root.Position, 8)) do
+			if not obj:IsDescendantOf(char) and obj.CanCollide then
+				if (obj.Position.Y + obj.Size.Y * 0.5) > footY + 0.5 then
+					obj.CanCollide = false
+					task.delay(0.3, function() if obj and obj.Parent then obj.CanCollide = true end end)
+				end
+			end
+		end
+	end
+
+	if UI.hb then
+		for _, p in ipairs(Players:GetPlayers()) do
+			if p ~= LP and p.Character then
+				local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+				if hrp then hrp.CanCollide = false end
+			end
+		end
+	end
+end)
+
+local function hasKey(o, tbl)
+	local s = (o.Name .. (o.Parent and o.Parent.Name or "")):lower()
+	for _, k in ipairs(tbl) do if s:find(k, 1, true) then return true end end
+end
+
+UI.scanBtn.MouseButton1Click:Connect(function()   UI.scan   = not UI.scan;   UI.scanBtn.BackgroundColor3   = UI.scan   and Color3.fromRGB(130, 45, 225) or OFF_COL; UI.updateScan() end)
+UI.coinBtn.MouseButton1Click:Connect(function()   UI.coin   = not UI.coin;   UI.coinBtn.BackgroundColor3   = UI.coin   and Color3.fromRGB(165, 50, 235) or OFF_COL end)
+UI.gunBtn.MouseButton1Click:Connect(function()    UI.gun    = not UI.gun;    UI.gunBtn.BackgroundColor3    = UI.gun    and Color3.fromRGB(195, 55, 245) or OFF_COL end)
+UI.noclipBtn.MouseButton1Click:Connect(function() UI.noclip = not UI.noclip; UI.noclipBtn.BackgroundColor3 = UI.noclip and Color3.fromRGB(145, 55, 235) or OFF_COL end)
+UI.hbBtn.MouseButton1Click:Connect(function()     UI.hb     = not UI.hb;     UI.hbBtn.BackgroundColor3     = UI.hb     and Color3.fromRGB(215, 65, 255) or OFF_COL; UI.updateHitbox() end)
+UI.showHbBtn.MouseButton1Click:Connect(function()
+	UI.showHb = not UI.showHb
+	UI.showHbBtn.Text = UI.showHb and "Khung: BẬT" or "Khung: TẮT"
+	UI.showHbBtn.BackgroundColor3 = UI.showHb and Color3.fromRGB(115, 45, 195) or OFF_COL
+	UI.updateHitbox()
+end)
+
+task.spawn(function()
+	while task.wait(0.25) do
+		local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+		if hum then
+			if UI.spd ~= 16 then hum.WalkSpeed = UI.spd end
+			hum.UseJumpPower = true
+			hum.JumpPower = UI.jmp
+		end
+		if UI.scan then UI.updateScan() end
+		if UI.hb then UI.updateHitbox() end
+		if UI.coin or UI.gun then
+			local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+			if root then
+				for _, o in ipairs(workspace:GetDescendants()) do
+					if o:IsA("BasePart") and not o:IsDescendantOf(LP.Character) then
+						local touch = o:FindFirstChildOfClass("TouchTransmitter") or (o.Parent and o.Parent:FindFirstChildOfClass("TouchTransmitter"))
+						local isPlayer = Players:GetPlayerFromCharacter(o.Parent) or (o.Parent and Players:GetPlayerFromCharacter(o.Parent.Parent))
+						if not isPlayer and ((UI.coin and touch and hasKey(o, COINS)) or (UI.gun and (touch or (o.Parent and o.Parent:IsA("Tool"))) and hasKey(o, GUNS))) then
+							o.CanCollide = false; o.CFrame = root.CFrame
+							if firetouchinterest then firetouchinterest(root, o, 0); firetouchinterest(root, o, 1) end
+						end
+					end
+				end
+			end
+		end
+	end
+end)
